@@ -44,7 +44,7 @@ public partial class GoogleTranslationService : ITranslationService
             return cachedTranslation!;
 
         var responseMessage = await _httpClient.GetAsync(GetValidGoogleTranslateApiUrl(from, to, text));
-        var translation = ParseGoogleTranslateApiResponse(responseMessage);
+        var translation = ParseGoogleTranslateApiResponse(responseMessage, from, to);
 
         _cache.Set(cacheKey, translation, TimeSpan.FromMinutes(10));
 
@@ -52,7 +52,7 @@ public partial class GoogleTranslationService : ITranslationService
     }
 
     
-    private TranslationDto ParseGoogleTranslateApiResponse(HttpResponseMessage response)
+    private TranslationDto ParseGoogleTranslateApiResponse(HttpResponseMessage response, string from, string to)
     {
         // example response: [[["Hola","hello",null,null,10]],null,"en",null,null,null,null,[]], so..
         
@@ -61,8 +61,8 @@ public partial class GoogleTranslationService : ITranslationService
         
         return new TranslationDto
         {
-            From = GetFromRegex().Match(response.RequestMessage?.RequestUri?.ToString() ?? "").Value,
-            To = GetToRegex().Match(response.RequestMessage?.RequestUri?.ToString() ?? "").Value,
+            From = from,
+            To = to,
             Text = result?[0]?[0]?[0].ToString() ?? "Sorry. Unparsable...",
         };
     }
@@ -70,10 +70,4 @@ public partial class GoogleTranslationService : ITranslationService
     /// I hope it would work in future...
     private string GetValidGoogleTranslateApiUrl(string from, string to, string text) =>
         $"https://translate.googleapis.com/translate_a/single?client=gtx&sl={from}&tl={to}&dt=t&q={text}";
-    
-    [GeneratedRegex("(?<=tl=)[^&]+")]
-    private static partial Regex GetToRegex();
-    
-    [GeneratedRegex("(?<=sl=)[^&]+")]
-    private static partial Regex GetFromRegex();
 }
