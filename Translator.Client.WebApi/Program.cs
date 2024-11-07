@@ -8,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<HttpClient>();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ITranslationService, GoogleTranslationService>();
 
 var app = builder.Build();

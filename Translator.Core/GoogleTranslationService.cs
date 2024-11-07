@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Caching.Memory;
 using Translator.Core.Abstractions;
 using Translator.Core.Abstractions.Commands;
 using Translator.Core.Abstractions.Dto;
@@ -9,10 +10,12 @@ namespace Translator.Core;
 public partial class GoogleTranslationService : ITranslationService
 {
     private readonly HttpClient _httpClient;
-
-    public GoogleTranslationService(HttpClient httpClient)
+    private readonly IMemoryCache _cache;
+    
+    public GoogleTranslationService(HttpClient httpClient, IMemoryCache cache)
     {
         _httpClient = httpClient;
+        _cache = cache;
     }
     
     public InformationDto GetInformation()
@@ -20,21 +23,34 @@ public partial class GoogleTranslationService : ITranslationService
         return new InformationDto
         {
             ServiceName = ServiceName.Google,
-            CacheType = CacheType.Database
+            CacheType = CacheType.InMemory
         };
     }
 
     public async Task<TranslateResponse> TranslateAsync(TranslateArguments arguments)
     {
         var requests = arguments.Items
-            .Select(argument => GetValidGoogleTranslateApiUrl(argument.From, argument.To, argument.Text))
-            .Select(requestUrl => _httpClient.GetAsync(requestUrl));
+            .Select(argument => GetTranslation(argument.From, argument.To, argument.Text));
         
-        var responseMessages = await Task.WhenAll(requests);
-        var translateResponses = responseMessages.Select(ParseGoogleTranslateApiResponse);
-        
+        var translateResponses = await Task.WhenAll(requests);
         return new(translateResponses);
     }
+    
+    private async Task<TranslationDto> GetTranslation(string from, string to, string text)
+    {
+        var cacheKey = $"{from}_{to}_{text}";
+
+        if (_cache.TryGetValue(cacheKey, out TranslationDto? cachedTranslation))
+            return cachedTranslation!;
+
+        var responseMessage = await _httpClient.GetAsync(GetValidGoogleTranslateApiUrl(from, to, text));
+        var translation = ParseGoogleTranslateApiResponse(responseMessage);
+
+        _cache.Set(cacheKey, translation, TimeSpan.FromMinutes(10));
+
+        return translation;
+    }
+
     
     private TranslationDto ParseGoogleTranslateApiResponse(HttpResponseMessage response)
     {

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Translator.Core;
 using Translator.Core.Abstractions.Commands;
@@ -8,6 +9,7 @@ using Translator.Core.Abstractions.Dto;
 var serviceProvider = new ServiceCollection()
     .AddScoped<HttpClient>()
     .AddScoped<ITranslationService, GoogleTranslationService>()
+    .AddMemoryCache()
     .BuildServiceProvider();
 
 var translationService = serviceProvider.GetRequiredService<ITranslationService>();
