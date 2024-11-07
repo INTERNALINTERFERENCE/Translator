@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option csharp_namespace = "Translator.Grpc";
+
+package translator;
+
+enum CacheType {
+  IN_MEMORY = 0;
+  DATABASE = 1;
+}
+
+enum ServiceName {
+  GOOGLE = 0;
+  YANDEX = 1;
+}
+
+message GrpcTranslateArguments {
+  repeated GrpcTranslationDto items = 1;
+}
+
+message GrpcTranslateResponse {
+  repeated GrpcTranslationDto items = 1;
+}
+
+message GrpcTranslationDto {
+  string from = 1;
+  string to = 2;
+  string text = 3;
+}
+
+message InformationDto {
+  CacheType cacheType = 1;
+  ServiceName serviceName = 2;
+}
+
+service TranslationService {
+  rpc GetInformation (Empty) returns (InformationDto);
+  rpc Translate (GrpcTranslateArguments) returns (GrpcTranslateResponse);
+}
+
+message Empty {}
